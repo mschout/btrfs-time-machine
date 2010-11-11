@@ -1,15 +1,5 @@
 #!/bin/bash
-
-# the unique identifier for the BTRFS partition (from /dev/disk/by-uuid)
-DEVICE_UUID=85f6968d-11d7-4b2c-b860-adb9a890df23
-DEVICE=$(blkid  | grep $DEVICE_UUID | cut -d ":" -f 1)
-MOUNT_POINT=/mnt/btrfs_backups
-SNAPSHOTS_DIR=/mnt/btrfs_backups/snapshots
-DATE=$(date +%Y%m%d-%H%M)
-RSYNC=/usr/bin/rsync
-RSYNC_OPTS='-av --numeric-ids --sparse --delete --human-readable'
-VERSION=0.1
-PATH=$PATH:/usr/local/bin
+source config.sh
 
 # rsync's source argument syntax is important,
 # make sure to use a trailing slash if if our
