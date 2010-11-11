@@ -1,0 +1,9 @@
+# the unique identifier for the BTRFS partition (from /dev/disk/by-uuid)
+DEST_DEVICE_UUID=e080ac83-fbb7-489e-b5c5-6135d4b2e0b9
+
+# where you mount your backup
+BACKUP_MOUNT_POINT=/mnt/backup_disk
+
+# directory you wish to backup.
+SOURCE_DIR=/home/whoami
+
