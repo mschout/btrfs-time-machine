@@ -56,7 +56,7 @@ def is_btrfs_subvolume?(volume,subvolume)
 end
 
 def command_path(command)
-  cmd_path=`which rsync`.strip
+  cmd_path=`which #{command}`.strip
   raise "#{command}: command not found" if cmd_path.empty?
   cmd_path
 end
