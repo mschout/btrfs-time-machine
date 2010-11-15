@@ -21,3 +21,6 @@ rsync_options:
   - "--exclude .gvfs"
   - "--exclude Downloads"
   - "--exclude Dropbox"
+
+# max age in hours to keep a snapshot around for.
+snapshot_max_age: 48 

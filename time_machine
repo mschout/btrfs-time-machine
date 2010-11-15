@@ -1,5 +1,6 @@
 #!/usr/bin/env ruby
 require 'date'
+require 'time'
 require 'yaml'
 
 VERSION='0.3'
@@ -11,6 +12,7 @@ cfg = YAML.load_file(File.dirname(__FILE__)+"/config.yml")
 @log_file = cfg['log_file']
 @device = `sudo blkid | grep #{cfg['dest_device_uuid']} | cut -d ":" -f 1`.strip  # TODO: convert this to proper ruby.
 @snapshot_dir = "#{@backup_mount_point}/snapshots"
+@snapshot_max_age = cfg['snapshot_max_age']
 
 @rsync_options = cfg['rsync_options']
 
@@ -91,6 +93,21 @@ def btrfs_snapshot
   # TODO make it return a status code.
 end
 
+def btrfs_delete_snapshot(date)
+  log "deleting snapshot from #{date}"
+  `sudo btrfs subvolume delete '#{@snapshot_dir}/#{date}' >> #{@log_file} 2>&1`
+end
+
+def btrfs_snapshot_rotate
+  snapshots = Dir.entries(@snapshot_dir) 
+  snapshots.delete ".."
+  snapshots.delete "."
+
+  snapshots.each do |snapshot|
+    btrfs_delete_snapshot snapshot if Time.parse(snapshot) < Time.now - (@snapshot_max_age * 3600)
+  end
+end
+
 log "BTRFS time machine version #{VERSION} started."
 
 # mount the backup filesystem
@@ -102,6 +119,7 @@ is_btrfs_subvolume? @backup_mount_point, "latest"
 remount_as "rw", @device, @backup_mount_point
 rsync @source_dir, "#{@backup_mount_point}/latest"
 btrfs_snapshot
+btrfs_snapshot_rotate
 remount_as "ro", @device, @backup_mount_point
 
 log "Finished Successfully!"
