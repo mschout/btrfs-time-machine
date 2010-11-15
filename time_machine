@@ -12,6 +12,8 @@ cfg = YAML.load_file(File.dirname(__FILE__)+"/config.yml")
 @device = `sudo blkid | grep #{cfg['dest_device_uuid']} | cut -d ":" -f 1`.strip  # TODO: convert this to proper ruby.
 @snapshot_dir = "#{@backup_mount_point}/snapshots"
 
+@rsync_options = cfg['rsync_options']
+
 def log(message)
   date = Time.now.asctime
 
@@ -63,7 +65,11 @@ end
 
 def rsync(src,dst)
   rsync = command_path('rsync')
-  rsync_opts = '-av --numeric-ids --sparse --delete --human-readable'
+  rsync_opts = '-av --numeric-ids --sparse --delete --delete-excluded --human-readable'
+
+  @rsync_options.each do |opt|
+    rsync_opts += " #{opt}"
+  end
 
   raise "rsync says: I need a source and destination" unless src && dst
 

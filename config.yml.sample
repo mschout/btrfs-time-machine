@@ -9,3 +9,15 @@ source_dir: '/home/jon'
 
 # log file
 log_file: '/var/log/time_machine.log'
+
+# exclusion paths are relative to #{source_dir}
+rsync_options:
+  - "-av"
+  - "--numeric-ids"
+  - "--sparse"
+  - "--delete"
+  - "--delete-excluded"
+  - "--human-readable"
+  - "--exclude .gvfs"
+  - "--exclude Downloads"
+  - "--exclude Dropbox"
