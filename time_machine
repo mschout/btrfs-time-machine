@@ -1,0 +1,101 @@
+#!/usr/bin/env ruby
+require 'date'
+require 'yaml'
+
+VERSION='0.3'
+
+cfg = YAML.load_file(File.dirname(__FILE__)+"/config.yml")
+@dest_device_uuid = cfg['dest_device_uuid']
+@backup_mount_point = cfg['backup_mount_point']
+@source_dir = cfg['source_dir']
+@log_file = cfg['log_file']
+@device = `sudo blkid | grep #{cfg['dest_device_uuid']} | cut -d ":" -f 1`.strip  # TODO: convert this to proper ruby.
+@snapshot_dir = "#{@backup_mount_point}/snapshots"
+
+def log(message)
+  date = Time.now.asctime
+
+  message.each_line do |line|
+    log = File.open(@log_file, 'a')
+    log.puts "#{date} BTRFS Time Machine: #{message}"
+    log.close
+  end
+end
+
+def mount(device,mount_point) 
+  raise "You did not provide me with a device and mount point." unless device && mount_point
+  unless is_mounted?(device,mount_point) then 
+    log "Mounting #{device} to #{mount_point}"
+    `sudo mount #{device} #{mount_point}` 
+  end
+  # TODO make it return a status code.
+end
+
+def remount_as(option,device,mount_point)
+  raise "I don't have a mount option, device and mount point." unless option && device && mount_point
+  raise "#{mount_point} is not mounted" unless is_mounted?(device,mount_point)
+  log "Remounting #{mount_point} as #{option}"
+  `sudo mount -o remount,#{option} #{device} #{mount_point}`
+  # TODO make it return a status code.
+end
+
+def is_mounted?(device,mount_point) 
+  raise "is_mounted says: You did not provide me with a device and mount point." unless device && mount_point
+  return true if `grep -c "#{mount_point}" /proc/mounts`.to_i == 1                   # TODO: convert this to proper ruby
+  return false
+end
+
+def is_btrfs_subvolume?(volume,subvolume)
+  raise "is_btrfs_subvolume says: I need a volume and subvolume to check." unless volume && subvolume
+  if `sudo btrfs subvolume list #{volume} | grep -c "#{subvolume}$"`.to_i != 1 then          # TODO: convert this to proper ruby
+    raise "You must create a subvolume at #{volume}/#{subvolume}. Try running `btrfs subvolume create #{volume}/#{subvolume}`."
+    return false 
+  end
+
+  true
+end
+
+def command_path(command)
+  cmd_path=`which rsync`.strip
+  raise "#{command}: command not found" if cmd_path.empty?
+  cmd_path
+end
+
+def rsync(src,dst)
+  rsync = command_path('rsync')
+  rsync_opts = '-av --numeric-ids --sparse --delete --human-readable'
+
+  raise "rsync says: I need a source and destination" unless src && dst
+
+  `sudo mkdir -p #{dst}`
+
+  # start the backup
+  log "Starting the backup."
+  `sudo #{rsync} #{rsync_opts} #{src} #{dst} >> #{@log_file} 2>&1`
+  # TODO make it return a status code.
+end
+
+def btrfs_snapshot
+  date = Time.now.strftime("%Y-%m-%d %H:%M:%S")
+  
+  `sudo mkdir -p #{@snapshot_dir}`
+
+  log "Creating file system snapshot."
+  `sudo btrfs subvolume snapshot #{@backup_mount_point}/latest '#{@snapshot_dir}/#{date}' >> #{@log_file} 2>&1`        # TODO: make logging better
+  # TODO make it return a status code.
+end
+
+log "BTRFS time machine version #{VERSION} started."
+
+# mount the backup filesystem
+mount @device, @backup_mount_point
+
+# backup filesystem needs to be btrfs for snapshots.
+is_btrfs_subvolume? @backup_mount_point, "latest"
+
+remount_as "rw", @device, @backup_mount_point
+rsync @source_dir, "#{@backup_mount_point}/latest"
+btrfs_snapshot
+remount_as "ro", @device, @backup_mount_point
+
+log "Finished Successfully!"

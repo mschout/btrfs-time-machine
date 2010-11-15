@@ -1,0 +1,11 @@
+# the unique identifier for the BTRFS partition (from /dev/disk/by-uuid)
+dest_device_uuid: 'e080ac83-fbb7-489e-b5c5-6135d4b2e0b9'
+
+# where you mount your backup
+backup_mount_point: '/mnt/btrfs_backups'
+
+# directory you wish to backup.
+source_dir: '/home/jon'
+
+# log file
+log_file: '/var/log/time_machine.log'
