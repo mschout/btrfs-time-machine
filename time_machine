@@ -10,7 +10,7 @@ cfg = YAML.load_file(File.dirname(__FILE__)+"/config.yml")
 @dest_device_uuid = cfg['dest_device_uuid']
 @backup_mount_point = cfg['backup_mount_point']
 @log_file = cfg['log_file']
-@device = `blkid | grep #{cfg['dest_device_uuid']} | cut -d ":" -f 1`.strip  # TODO: convert this to proper ruby.
+@device = `blkid | grep '#{cfg['dst_device_uuid']}'`.split(':').first
 @snapshot_dir = "#{@backup_mount_point}/snapshots"
 @snapshot_max_age = cfg['snapshot_max_age']
 
@@ -32,26 +32,30 @@ def mount(device,mount_point)
     log "Mounting #{device} to #{mount_point}"
     `sudo mount #{device} #{mount_point}` 
   end
-  # TODO make it return a status code.
+  raise "Could not mount #{@device} to #{@backup_mount_point}" unless $?.success?
+  $?.success?
 end
 
 def remount_as(option,device,mount_point)
   raise "I don't have a mount option, device and mount point." unless option && device && mount_point
-  raise "#{mount_point} is not mounted" unless is_mounted?(device,mount_point)
+  raise "Cannot remount because #{mount_point} is not mounted" unless is_mounted?(device,mount_point)
   log "Remounting #{mount_point} as #{option}"
   `sudo mount -o remount,#{option} #{device} #{mount_point}`
-  # TODO make it return a status code.
+  raise "mount #{device} as #{option} failed" unless $?.success?
+  $?.success?
 end
 
 def is_mounted?(device,mount_point) 
   raise "is_mounted says: You did not provide me with a device and mount point." unless device && mount_point
-  return true if `grep -c "#{mount_point}" /proc/mounts`.to_i == 1                   # TODO: convert this to proper ruby
-  return false
+  File.open('/proc/mounts', 'r').each_line do |line|
+    break true if line.include? mount_point
+  end
 end
 
 def is_btrfs_subvolume?(volume,subvolume)
   raise "is_btrfs_subvolume says: I need a volume and subvolume to check." unless volume && subvolume
-  if `sudo btrfs subvolume list #{volume} | grep -c "#{subvolume}$"`.to_i != 1 then          # TODO: convert this to proper ruby
+
+  unless `sudo btrfs subvolume list #{volume}`.include? 'latest' then
     raise "You must create a subvolume at #{volume}/#{subvolume}. Try running `btrfs subvolume create #{volume}/#{subvolume}`."
     return false 
   end
@@ -96,7 +100,7 @@ def btrfs_snapshot
   log "Creating file system snapshot."
   raise "A snapshot by that name already exists" if File.directory?("#{@snapshot_dir}/#{date}")
   `sudo btrfs subvolume snapshot #{@backup_mount_point}/latest '#{@snapshot_dir}/#{date}' >> #{@log_file} 2>&1`        # TODO: make logging better
-  # TODO make it return a status code.
+  $?.success?
 end
 
 def btrfs_delete_snapshot(date)
