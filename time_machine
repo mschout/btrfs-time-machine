@@ -70,26 +70,31 @@ def command_path(command)
 end
 
 def rsync
+  failures = []
   @sources.each do |src_data|
     src = src_data['source']
     dst = File.expand_path("#{@backup_mount_point}/latest/#{src}")
     rsync = command_path('rsync')
     rsync_opts = '-av --numeric-ids --sparse --delete --delete-excluded --human-readable'
 
-    src_data['exclusions'].each do |opt|
-      exclude_path = "#{opt}"             # TODO: remove ./ from start of string if it was put in.
-      rsync_opts += " --exclude '#{exclude_path}'"
+    if src_data.key? 'exclusions' then
+      src_data['exclusions'].each do |exclusion|
+        exclusion.gsub!(/^\.\//, '')                  # drop off the ./ because rsync doesn't like em.
+        rsync_opts += " --exclude '#{exclusion}'"
+      end
     end
 
     raise "rsync says: I need a source and destination" unless src && dst
 
     `sudo mkdir -p #{dst}`
+    raise "Could not create #{dst} directory" unless $?.success?
 
     # start the backup
     log "Starting the backup."
     `sudo #{rsync} #{rsync_opts} #{src}/ #{dst} >> #{@log_file} 2>&1` # src needs a trailing slash on dir or it'll go in wrong dir.
-    # TODO make it return a status code.
+    failures.push push unless $?.success?
   end
+  failures.include? true 
 end
 
 def btrfs_snapshot
