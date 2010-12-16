@@ -3,14 +3,14 @@ require 'date'
 require 'time'
 require 'yaml'
 
-VERSION='0.3'
+VER='0.4'
 
 cfg = YAML.load_file(File.dirname(__FILE__)+"/config.yml")
+@sources = YAML.load_file(File.dirname(__FILE__)+"/sources.yml")
 @dest_device_uuid = cfg['dest_device_uuid']
 @backup_mount_point = cfg['backup_mount_point']
-@source_dir = cfg['source_dir']
 @log_file = cfg['log_file']
-@device = `sudo blkid | grep #{cfg['dest_device_uuid']} | cut -d ":" -f 1`.strip  # TODO: convert this to proper ruby.
+@device = `blkid | grep #{cfg['dest_device_uuid']} | cut -d ":" -f 1`.strip  # TODO: convert this to proper ruby.
 @snapshot_dir = "#{@backup_mount_point}/snapshots"
 @snapshot_max_age = cfg['snapshot_max_age']
 
@@ -65,22 +65,28 @@ def command_path(command)
   cmd_path
 end
 
-def rsync(src,dst)
-  rsync = command_path('rsync')
-  rsync_opts = '-av --numeric-ids --sparse --delete --delete-excluded --human-readable'
+def rsync
+  @sources.each do |src_data|
+    `rm -Rf #{File.expand_path("#{@backup_mount_point}/latest/")}/*`
+    src = src_data['source']
+    dst = File.expand_path("#{@backup_mount_point}/latest/#{src}")
+    rsync = command_path('rsync')
+    rsync_opts = '-av --numeric-ids --sparse --delete --delete-excluded --human-readable'
 
-  @rsync_options.each do |opt|
-    rsync_opts += " #{opt}"
+    src_data['exclusions'].each do |opt|
+      exclude_path = "#{opt}"             # TODO: remove ./ from start of string if it was put in.
+      rsync_opts += " --exclude '#{exclude_path}'"
+    end
+
+    raise "rsync says: I need a source and destination" unless src && dst
+
+    `sudo mkdir -p #{dst}`
+
+    # start the backup
+    log "Starting the backup."
+    `sudo #{rsync} #{rsync_opts} #{src}/ #{dst} >> #{@log_file} 2>&1` # src needs a trailing slash on dir or it'll go in wrong dir.
+    # TODO make it return a status code.
   end
-
-  raise "rsync says: I need a source and destination" unless src && dst
-
-  `sudo mkdir -p #{dst}`
-
-  # start the backup
-  log "Starting the backup."
-  `sudo #{rsync} #{rsync_opts} #{src} #{dst} >> #{@log_file} 2>&1`
-  # TODO make it return a status code.
 end
 
 def btrfs_snapshot
@@ -89,6 +95,7 @@ def btrfs_snapshot
   `sudo mkdir -p #{@snapshot_dir}`
 
   log "Creating file system snapshot."
+  raise "A snapshot by that name already exists" if File.directory?("#{@snapshot_dir}/#{date}")
   `sudo btrfs subvolume snapshot #{@backup_mount_point}/latest '#{@snapshot_dir}/#{date}' >> #{@log_file} 2>&1`        # TODO: make logging better
   # TODO make it return a status code.
 end
@@ -108,7 +115,7 @@ def btrfs_snapshot_rotate
   end
 end
 
-log "BTRFS time machine version #{VERSION} started."
+log "BTRFS time machine version #{VER} started."
 
 # mount the backup filesystem
 mount @device, @backup_mount_point
@@ -117,7 +124,9 @@ mount @device, @backup_mount_point
 is_btrfs_subvolume? @backup_mount_point, "latest"
 
 remount_as "rw", @device, @backup_mount_point
-rsync @source_dir, "#{@backup_mount_point}/latest"
+
+rsync
+
 btrfs_snapshot
 btrfs_snapshot_rotate
 remount_as "ro", @device, @backup_mount_point

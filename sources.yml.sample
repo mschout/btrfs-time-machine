@@ -1,0 +1,11 @@
+# directory you wish to backup.
+# exclusion paths are relative to source directory
+- source: '/home/me'
+  exclusions:
+    - 'Dropbox'
+    - 'tmp'
+
+- source: '/usr/local'
+  exclusions:
+    - 'src'
+
