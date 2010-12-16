@@ -67,7 +67,6 @@ end
 
 def rsync
   @sources.each do |src_data|
-    `rm -Rf #{File.expand_path("#{@backup_mount_point}/latest/")}/*`
     src = src_data['source']
     dst = File.expand_path("#{@backup_mount_point}/latest/#{src}")
     rsync = command_path('rsync')
