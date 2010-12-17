@@ -18,5 +18,5 @@ rsync_options:
 # max age in hours to keep a snapshot around for.
 snapshot_max_age: 48 
 
-# lock file to prevent simultanious backups.
+# lock file to prevent simultaneous backups.
 lock_file: '/var/lock/time_machine'
