@@ -5,9 +5,14 @@ require 'yaml'
 require 'fileutils'
 
 VER='0.4'
+CONFIG = File.dirname(__FILE__)+"/config.yml"
+SOURCES = File.dirname(__FILE__)+"/sources.yml"
 
-cfg = YAML.load_file(File.dirname(__FILE__)+"/config.yml")
-@sources = YAML.load_file(File.dirname(__FILE__)+"/sources.yml")
+raise "Config file: `#{CONFIG}' could not be found" unless File.exist? CONFIG
+raise "Sources file: `#{CONFIG}' could not be found" unless File.exist? SOURCES 
+
+cfg = YAML.load_file(CONFIG)
+@sources = YAML.load_file(SOURCES)
 @dest_device_uuid = cfg['dest_device_uuid']
 @backup_mount_point = cfg['backup_mount_point']
 @log_file = cfg['log_file']
