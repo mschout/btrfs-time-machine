@@ -2,6 +2,7 @@
 require 'date'
 require 'time'
 require 'yaml'
+require 'fileutils'
 
 VER='0.4'
 
@@ -13,8 +14,13 @@ cfg = YAML.load_file(File.dirname(__FILE__)+"/config.yml")
 @device = `blkid | grep '#{cfg['dst_device_uuid']}'`.split(':').first
 @snapshot_dir = "#{@backup_mount_point}/snapshots"
 @snapshot_max_age = cfg['snapshot_max_age']
+@lock_file = cfg['lock_file']
 
 @rsync_options = cfg['rsync_options']
+
+def lock()  FileUtils.touch @lock_file end 
+def unlock() FileUtils.rm @lock_file end 
+def locked?() File.exist? @lock_file end 
 
 def log(message)
   date = Time.now.asctime
@@ -123,6 +129,9 @@ def btrfs_snapshot_rotate
   end
 end
 
+raise "It seems another backup is still running, or previous backup did not complete. If you are sure that there are no backups currently running then try deleting the lockfile at `#{@lockfile}'." if locked?
+
+lock
 log "BTRFS time machine version #{VER} started."
 
 # mount the backup filesystem
@@ -140,3 +149,4 @@ btrfs_snapshot_rotate
 remount_as "ro", @device, @backup_mount_point
 
 log "Finished Successfully!"
+unlock
