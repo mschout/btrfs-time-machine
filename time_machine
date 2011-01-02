@@ -177,6 +177,9 @@ raise "It seems another backup is still running, or previous backup did not comp
 lock
 log "BTRFS time machine version #{VER} started."
 
+# scan disks for btrfs
+`sudo btrfsctl -a >> #{@log_file} 2>&1`
+
 # mount the backup filesystem
 mount @device, @backup_mount_point
 
