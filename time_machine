@@ -94,9 +94,11 @@ end
 
 def is_mounted?(device,mount_point) 
   raise "is_mounted says: You did not provide me with a device and mount point." unless device && mount_point
+  found = false
   File.open('/proc/mounts', 'r').each_line do |line|
-    break true if line.include? mount_point
+    found = true if line.include? mount_point
   end
+  found
 end
 
 def is_btrfs_subvolume?(volume,subvolume)
