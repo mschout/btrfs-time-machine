@@ -1,4 +1,4 @@
-# the unique identifier for the BTRFS partition (from /dev/disk/by-uuid)
+# the unique identifier for the BTRFS partition (from `btrfs filesystem show`)
 dest_device_uuid: 'e080ac83-fbb7-489e-b5c5-6135d4b2e0b9'
 
 # where you mount your backup

@@ -9,3 +9,5 @@
   exclusions:
     - 'src'
 
+- source '/var/spool/mail'
+- source '/var/www'

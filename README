@@ -2,4 +2,4 @@ A script to mimic time machine on Mac OS X by using BTRFS snapshots in combinati
 
 Script works by rsync'ing your data onto a btrfs filesystem, then taking btrfs snapshots of that rsync'ed directory.
 
-WARNING: Version 0.2 is not backwards compatible with version 0.1. I recommend running on a clean btrfs partition.
+WARNING: Version 0.2 or higher are not backwards compatible with version 0.1. I recommend running on a clean btrfs partition.
