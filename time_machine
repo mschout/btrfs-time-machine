@@ -132,6 +132,10 @@ def rsync
     rsync = command_path('rsync')
     rsync_opts = '-av --numeric-ids --delete --delete-excluded --human-readable --inplace'
 
+    unless @rsync_options.nil?
+      rsync_opts += ' ' + @rsync_options.join(' ')
+    end
+
     if src_data.key? 'exclusions' then
       src_data['exclusions'].each do |exclusion|
         exclusion.gsub!(/^\.\//, '')                  # drop off the ./ because rsync doesn't like em.
