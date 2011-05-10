@@ -130,7 +130,7 @@ def rsync
     src = src_data['source']
     dst = File.expand_path("#{@backup_mount_point}/latest/#{src}")
     rsync = command_path('rsync')
-    rsync_opts = '-av --numeric-ids --sparse --delete --delete-excluded --human-readable --inplace'
+    rsync_opts = '-av --numeric-ids --delete --delete-excluded --human-readable --inplace'
 
     if src_data.key? 'exclusions' then
       src_data['exclusions'].each do |exclusion|
