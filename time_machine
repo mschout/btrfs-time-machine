@@ -182,7 +182,7 @@ def btrfs_snapshot_rotate
   end
 end
 
-raise "It seems another backup is still running, or previous backup did not complete. If you are sure that there are no backups currently running then try deleting the lockfile at `#{@lockfile}'." if locked?
+raise "It seems another backup is still running, or previous backup did not complete. If you are sure that there are no backups currently running then try deleting the lockfile at `#{@lock_file}'." if locked?
 
 lock
 log "BTRFS time machine version #{VER} started."
