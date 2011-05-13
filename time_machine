@@ -172,7 +172,6 @@ def command_path(command)
 end
 
 def rsync
-  failures = []
   @sources.each do |src_data|
     src = src_data['source']
     dst = File.expand_path("#{@backup_mount_point}/latest/#{src}")
@@ -198,9 +197,8 @@ def rsync
     # start the backup
     log "Starting the backup."
     `sudo #{rsync} #{rsync_opts} #{src}/ #{dst} >> #{@log_file} 2>&1` # src needs a trailing slash on dir or it'll go in wrong dir.
-    failures.push true unless $?.success?
+    alert "Failed to backup `#{src}'" unless $?.success?
   end
-  failures.include? true
 end
 
 def btrfs_snapshot
