@@ -227,7 +227,7 @@ end
 
 lock
 log "BTRFS time machine version #{VER} started."
-#btrfs_scan
+btrfs_scan
 
 # mount the backup filesystem
 mount @device, @backup_mount_point
