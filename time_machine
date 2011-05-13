@@ -249,4 +249,5 @@ btrfs_snapshot_rotate
 remount_as "ro", @device, @backup_mount_point
 
 log "Finished Successfully!"
+send_alerts
 unlock
