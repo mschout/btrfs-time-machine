@@ -175,9 +175,7 @@ def rsync
     end
 
     alert_and_abort "rsync says: I need a source and destination" unless src && dst
-
-    `sudo mkdir -p #{dst}` # TODO: convert this to ruby
-    alert_and_abort "Could not create #{dst} directory" unless $?.success?
+    alert_and_abort "Could not create #{dst} directory" unless FileUtils.mkdir_p dst
 
     # start the backup
     log "Starting the backup."
@@ -201,8 +199,7 @@ end
 
 def btrfs_snapshot
   date = Time.now.strftime("%Y-%m-%d %H:%M:%S")
-
-  `sudo mkdir -p #{@snapshot_dir}`
+  FileUtils.mkdir_p @snapshot_dir
 
   log "Creating file system snapshot."
   alert_and_abort "A snapshot by that name already exists" if File.directory?("#{@snapshot_dir}/#{date}")
