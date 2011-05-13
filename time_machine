@@ -149,23 +149,6 @@ def is_mounted?(device,mount_point)
   found
 end
 
-def is_btrfs_subvolume?(volume,subvolume)
-  # WARNING:
-  # Btrfs v0.19 (at least) has a bug where it will not always display all of
-  # the subvolumes. This breaks this method and will prevent backups if
-  # 'latest' cannot be found in the list. But it is getting fixed.
-  # http://www.spinics.net/lists/linux-btrfs/msg07605.html
-
-  alert_and_abort "is_btrfs_subvolume says: I need a volume and subvolume to check." unless volume && subvolume
-
-  unless `sudo btrfs subvolume list #{volume}`.include? 'latest' then
-    alert_and_abort "You must create a subvolume at #{volume}/#{subvolume}. Try running `btrfs subvolume create #{volume}/#{subvolume}`."
-    return false
-  end
-
-  true
-end
-
 def command_path(command)
   cmd_path=`which #{command}`.strip
   alert_and_abort "#{command}: command not found" if cmd_path.empty?
@@ -202,6 +185,19 @@ def rsync
   end
 end
 
+def btrfs_scan()
+  `sudo btrfsctl -a >> #{@log_file} 2>&1`
+end
+
+def btrfs_volume?(path)
+  unless File.directory? path
+    return false
+  end
+
+  return true if File.stat(path).ino == 256
+  false
+end
+
 def btrfs_snapshot
   date = Time.now.strftime("%Y-%m-%d %H:%M:%S")
 
@@ -230,15 +226,16 @@ end
 
 lock
 log "BTRFS time machine version #{VER} started."
-
-# scan disks for btrfs
-`sudo btrfsctl -a >> #{@log_file} 2>&1`
+#btrfs_scan
 
 # mount the backup filesystem
 mount @device, @backup_mount_point
 
 # backup filesystem needs to be btrfs for snapshots.
-is_btrfs_subvolume? @backup_mount_point, "latest"
+path = File.join(@backup_mount_point, "latest")
+unless btrfs_volume? path
+  alert_and_abort "Subvolume was not found at `#{path}'. Try running `btrfs subvolume create #{path}'."
+end
 
 remount_as "rw", @device, @backup_mount_point
 
