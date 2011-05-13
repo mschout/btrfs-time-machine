@@ -102,6 +102,12 @@ def is_mounted?(device,mount_point)
 end
 
 def is_btrfs_subvolume?(volume,subvolume)
+  # WARNING:
+  # Btrfs v0.19 (at least) has a bug where it will not always display all of
+  # the subvolumes. This breaks this method and will prevent backups if
+  # 'latest' cannot be found in the list. But it is getting fixed.
+  # http://www.spinics.net/lists/linux-btrfs/msg07605.html
+
   raise "is_btrfs_subvolume says: I need a volume and subvolume to check." unless volume && subvolume
 
   unless `sudo btrfs subvolume list #{volume}`.include? 'latest' then
