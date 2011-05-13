@@ -147,7 +147,7 @@ def rsync
     # start the backup
     log "Starting the backup."
     `sudo #{rsync} #{rsync_opts} #{src}/ #{dst} >> #{@log_file} 2>&1` # src needs a trailing slash on dir or it'll go in wrong dir.
-    failures.push push unless $?.success?
+    failures.push true unless $?.success?
   end
   failures.include? true
 end
