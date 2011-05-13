@@ -60,7 +60,17 @@ cfg = YAML.load_file(CONFIG)
 @rsync_options = cfg['rsync_options']
 @mount_options = cfg['mount_options']
 
-def lock()  FileUtils.touch @lock_file end
+def lock()
+  if locked?
+    message = "It seems another backup is still running, or previous backup did not complete.  If you are sure that there are no backups currently running then try deleting the lockfile at `#{@lock_file}'."
+
+    raise message
+    send_alerts
+    exit 1
+  end
+  FileUtils.touch @lock_file
+end
+
 def unlock() FileUtils.rm @lock_file end
 def locked?() File.exist? @lock_file end
 
@@ -187,8 +197,6 @@ def btrfs_snapshot_rotate
     btrfs_delete_snapshot snapshot if Time.parse(snapshot) < Time.now - (@snapshot_max_age * 3600)
   end
 end
-
-raise "It seems another backup is still running, or previous backup did not complete. If you are sure that there are no backups currently running then try deleting the lockfile at `#{@lock_file}'." if locked?
 
 lock
 log "BTRFS time machine version #{VER} started."
