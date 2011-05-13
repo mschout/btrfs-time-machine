@@ -2,7 +2,7 @@
 dest_device_uuid: 'e080ac83-fbb7-489e-b5c5-6135d4b2e0b9'
 
 # where you mount your backup
-backup_mount_point: '/mnt/btrfs_backups'
+backup_mount_point: '/srv/btrfs_backups'
 
 # log file
 log_file: '/var/log/time_machine.log'
@@ -16,7 +16,7 @@ rsync_options:
   - "--human-readable"
 
 # max age in hours to keep a snapshot around for.
-snapshot_max_age: 48 
+snapshot_max_age: 48
 
 # lock file to prevent simultaneous backups.
 lock_file: '/var/lock/time_machine'
