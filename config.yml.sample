@@ -20,3 +20,6 @@ snapshot_max_age: 48
 
 # lock file to prevent simultaneous backups.
 lock_file: '/var/lock/time_machine'
+
+# who should be notified upon error (optional)
+#alert_email: 'someone@somewhere.com'
