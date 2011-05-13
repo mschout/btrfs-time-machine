@@ -57,6 +57,7 @@ cfg = YAML.load_file(CONFIG)
 @snapshot_dir = "#{@backup_mount_point}/snapshots"
 @snapshot_max_age = cfg['snapshot_max_age']
 @lock_file = cfg['lock_file']
+@hostname = `hostname -s`
 @email = cfg['alert_email'] || nil
 
 @rsync_options = cfg['rsync_options']
