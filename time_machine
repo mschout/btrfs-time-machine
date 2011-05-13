@@ -96,6 +96,7 @@ end
 def alert_and_abort(message)
   alert("#{message}")
   alert("Backup aborting due to fatal error")
+  send_alerts
   unlock
   exit 1
 end
