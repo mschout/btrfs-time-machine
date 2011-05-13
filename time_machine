@@ -13,7 +13,7 @@ optparse = OptionParser.new do|opts|
   # Set a banner, displayed at the top
   # of the help screen.
   opts.banner = "Usage: #{__FILE__} [options]"
- 
+
   # Define the options, and what they do
   options[:config] = nil
   opts.on( '-c', '--config FILE', 'Config file to use.' ) do|file|
@@ -29,7 +29,7 @@ optparse = OptionParser.new do|opts|
   opts.on( '-s', '--sources FILE', 'Sources file to use.' ) do|file|
     options[:sources] = file
   end
- 
+
   #options[:verbose] = false
   #opts.on( '-v', '--verbose', 'Output more information' ) do
   #  options[:verbose] = true
@@ -45,7 +45,7 @@ SOURCES = options[:sources] ? options[:sources] : File.dirname(__FILE__)+"/sourc
 #############################################################################################
 
 raise "Config file: `#{CONFIG}' could not be found" unless File.exist? CONFIG
-raise "Sources file: `#{SOURCES}' could not be found" unless File.exist? SOURCES 
+raise "Sources file: `#{SOURCES}' could not be found" unless File.exist? SOURCES
 
 cfg = YAML.load_file(CONFIG)
 @sources = YAML.load_file(SOURCES)
@@ -59,9 +59,9 @@ cfg = YAML.load_file(CONFIG)
 
 @rsync_options = cfg['rsync_options']
 
-def lock()  FileUtils.touch @lock_file end 
-def unlock() FileUtils.rm @lock_file end 
-def locked?() File.exist? @lock_file end 
+def lock()  FileUtils.touch @lock_file end
+def unlock() FileUtils.rm @lock_file end
+def locked?() File.exist? @lock_file end
 
 def log(message)
   date = Time.now.asctime
@@ -73,11 +73,11 @@ def log(message)
   end
 end
 
-def mount(device,mount_point) 
+def mount(device,mount_point)
   raise "You did not provide me with a device and mount point." unless device && mount_point
-  unless is_mounted?(device,mount_point) then 
+  unless is_mounted?(device,mount_point) then
     log "Mounting #{device} to #{mount_point}"
-    `sudo mount #{device} #{mount_point}` 
+    `sudo mount #{device} #{mount_point}`
   end
   raise "Could not mount #{@device} to #{@backup_mount_point}" unless $?.success?
   $?.success?
@@ -92,7 +92,7 @@ def remount_as(option,device,mount_point)
   $?.success?
 end
 
-def is_mounted?(device,mount_point) 
+def is_mounted?(device,mount_point)
   raise "is_mounted says: You did not provide me with a device and mount point." unless device && mount_point
   found = false
   File.open('/proc/mounts', 'r').each_line do |line|
@@ -106,7 +106,7 @@ def is_btrfs_subvolume?(volume,subvolume)
 
   unless `sudo btrfs subvolume list #{volume}`.include? 'latest' then
     raise "You must create a subvolume at #{volume}/#{subvolume}. Try running `btrfs subvolume create #{volume}/#{subvolume}`."
-    return false 
+    return false
   end
 
   true
@@ -143,12 +143,12 @@ def rsync
     `sudo #{rsync} #{rsync_opts} #{src}/ #{dst} >> #{@log_file} 2>&1` # src needs a trailing slash on dir or it'll go in wrong dir.
     failures.push push unless $?.success?
   end
-  failures.include? true 
+  failures.include? true
 end
 
 def btrfs_snapshot
   date = Time.now.strftime("%Y-%m-%d %H:%M:%S")
-  
+
   `sudo mkdir -p #{@snapshot_dir}`
 
   log "Creating file system snapshot."
@@ -163,7 +163,7 @@ def btrfs_delete_snapshot(date)
 end
 
 def btrfs_snapshot_rotate
-  snapshots = Dir.entries(@snapshot_dir) 
+  snapshots = Dir.entries(@snapshot_dir)
   snapshots.delete ".."
   snapshots.delete "."
 
