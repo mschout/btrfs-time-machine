@@ -16,7 +16,10 @@ log_file: '/var/log/time_machine.log'
 #    " --max-size 2G"
 
 # max age in hours to keep a snapshot around for.
-snapshot_max_age: 48
+snapshot_max_age:
+    hourly: 48   # 2 days
+    weekly: 2160 # 90 days
+    daily: 720   # 30 days
 
 # lock file to prevent simultaneous backups.
 lock_file: '/var/lock/time_machine'

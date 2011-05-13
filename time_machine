@@ -199,12 +199,36 @@ end
 
 def btrfs_snapshot
   date = Time.now.strftime("%Y-%m-%d %H:%M:%S")
-  FileUtils.mkdir_p @snapshot_dir
 
-  log "Creating file system snapshot."
-  alert_and_abort "A snapshot by that name already exists" if File.directory?("#{@snapshot_dir}/#{date}")
-  `sudo btrfs subvolume snapshot #{@backup_mount_point}/latest '#{@snapshot_dir}/#{date}' >> #{@log_file} 2>&1`        # TODO: make logging better
+  FileUtils.mkdir_p "#{@snapshot_dir}/hourly"
+  FileUtils.mkdir_p "#{@snapshot_dir}/daily"
+  FileUtils.mkdir_p "#{@snapshot_dir}/weekly"
+
+  snap_dir = "#{@snapshot_dir}/hourly/#{date}"
+  latest   = "#{@backup_mount_point}/latest"
+
+  # create hourly snapshot
+  log "Creating hourly file system snapshot."
+  alert_and_abort "A snapshot by that name already exists" if File.directory?(snap_dir)
+  `sudo btrfs subvolume snapshot #{latest} '#{snap_dir}' >> #{@log_file} 2>&1`        # TODO: make logging better
+
   $?.success?
+
+  # make daily snapshot if necessary
+  snap_dir = "#{@snapshot_dir}/daily/" + Time.now.strftime("%Y-%m-%d")
+  unless File.directory?(snap_dir)
+    log "Creating daily snapshot"
+    `sudo btrfs subvolume snapshot #{latest} '#{snap_dir}' >> #{@log_file} 2>&1`
+    $?.success?
+  end
+
+  # make weekly snapshot if necessary
+  snap_dir = "#{@snapshot_dir}/weekly/" + Time.now.strftime("%Y-%m-%d %U")
+  unless File.directory?(snap_dir)
+    log "Creating weekly snapshot"
+    `sudo btrfs subvolume snapshot #{latest} '#{snap_dir}' >> #{@log_file} 2>&1`
+    $?.success?
+  end
 end
 
 def btrfs_delete_snapshot(date)
@@ -213,12 +237,17 @@ def btrfs_delete_snapshot(date)
 end
 
 def btrfs_snapshot_rotate
-  snapshots = Dir.entries(@snapshot_dir)
-  snapshots.delete ".."
-  snapshots.delete "."
+  ['hourly','daily','weekly'].each do |unit|
+    snapshots = Dir.entries("#{@snapshot_dir}/#{unit}")
+    snapshots.delete ".."
+    snapshots.delete "."
 
-  snapshots.each do |snapshot|
-    btrfs_delete_snapshot snapshot if Time.parse(snapshot) < Time.now - (@snapshot_max_age * 3600)
+    snapshots.each do |snapshot|
+      max_age = @snapshot_max_age[unit].to_i * 3600
+      if Time.parse(snapshot) < Time.now - (@snapshot_max_age[unit] * 3600)
+        btrfs_delete_snapshot snapshot
+      end
+    end
   end
 end
 
