@@ -7,13 +7,13 @@ backup_mount_point: '/srv/btrfs_backups'
 # log file
 log_file: '/var/log/time_machine.log'
 
-rsync_options:
-  - "-av"
-  - "--numeric-ids"
-  - "--sparse"
-  - "--delete"
-  - "--delete-excluded"
-  - "--human-readable"
+# extra mount options for the btrfs volume
+#mount_options:
+#   - compress
+
+# extra rsync options
+#rsync_options:
+#    " --max-size 2G"
 
 # max age in hours to keep a snapshot around for.
 snapshot_max_age: 48

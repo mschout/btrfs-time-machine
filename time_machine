@@ -58,6 +58,7 @@ cfg = YAML.load_file(CONFIG)
 @lock_file = cfg['lock_file']
 
 @rsync_options = cfg['rsync_options']
+@mount_options = cfg['mount_options']
 
 def lock()  FileUtils.touch @lock_file end
 def unlock() FileUtils.rm @lock_file end
@@ -87,7 +88,12 @@ def remount_as(option,device,mount_point)
   raise "I don't have a mount option, device and mount point." unless option && device && mount_point
   raise "Cannot remount because #{mount_point} is not mounted" unless is_mounted?(device,mount_point)
   log "Remounting #{mount_point} as #{option}"
-  `sudo mount -o remount,#{option} #{device} #{mount_point}`
+
+  mount_opts = ['remount']
+  mount_opts.push(@mount_options) unless @mount_options.nil?
+  mount_opt_str = mount_opts.join(',')
+
+  `sudo mount -o #{mount_opt_str},#{option} #{device} #{mount_point}`
   raise "mount #{device} as #{option} failed" unless $?.success?
   $?.success?
 end
@@ -130,7 +136,11 @@ def rsync
     src = src_data['source']
     dst = File.expand_path("#{@backup_mount_point}/latest/#{src}")
     rsync = command_path('rsync')
-    rsync_opts = '-av --numeric-ids --sparse --delete --delete-excluded --human-readable --inplace'
+    rsync_opts = '-av --numeric-ids --delete --delete-excluded --human-readable --inplace'
+
+    unless @rsync_options.nil?
+      rsync_opts += ' ' + @rsync_options.join(' ')
+    end
 
     if src_data.key? 'exclusions' then
       src_data['exclusions'].each do |exclusion|
@@ -178,7 +188,7 @@ def btrfs_snapshot_rotate
   end
 end
 
-raise "It seems another backup is still running, or previous backup did not complete. If you are sure that there are no backups currently running then try deleting the lockfile at `#{@lockfile}'." if locked?
+raise "It seems another backup is still running, or previous backup did not complete. If you are sure that there are no backups currently running then try deleting the lockfile at `#{@lock_file}'." if locked?
 
 lock
 log "BTRFS time machine version #{VER} started."
