@@ -4,6 +4,7 @@ require 'date'
 require 'time'
 require 'yaml'
 require 'fileutils'
+require 'shellwords'
 
 VER='0.4'
 
@@ -56,15 +57,18 @@ cfg = YAML.load_file(CONFIG)
 @snapshot_dir = "#{@backup_mount_point}/snapshots"
 @snapshot_max_age = cfg['snapshot_max_age']
 @lock_file = cfg['lock_file']
+@email = cfg['alert_email'] || nil
 
 @rsync_options = cfg['rsync_options']
 @mount_options = cfg['mount_options']
+
+@alerts = [] # an empty array to store alerts that will be emailed
 
 def lock()
   if locked?
     message = "It seems another backup is still running, or previous backup did not complete.  If you are sure that there are no backups currently running then try deleting the lockfile at `#{@lock_file}'."
 
-    raise message
+    alert message
     send_alerts
     exit 1
   end
@@ -84,19 +88,46 @@ def log(message)
   end
 end
 
+def alert(message)
+  log(message)
+  @alerts.push message
+end
+
+def alert_and_abort(message)
+  alert("#{message}")
+  alert("Backup aborting due to fatal error")
+  unlock
+  exit 1
+end
+
+def send_alerts()
+  return 0 if @email.nil? || @alerts.count == 0
+
+  subject = "BTRFS Time Machine failed on #{@hostname}"
+  message = ''
+
+  @alerts.each do |alert|
+    message += "* #{alert}\n"
+  end
+
+  message += "\nFor more details check the log file at '#{@hostname}:#{@log_file}'."
+
+  `echo #{message.shellescape} | mail -s "#{subject}" #{@email}`
+end
+
 def mount(device,mount_point)
-  raise "You did not provide me with a device and mount point." unless device && mount_point
+  alert_and_abort "You did not provide me with a device and mount point." unless device && mount_point
   unless is_mounted?(device,mount_point) then
     log "Mounting #{device} to #{mount_point}"
     `sudo mount #{device} #{mount_point}`
   end
-  raise "Could not mount #{@device} to #{@backup_mount_point}" unless $?.success?
+  alert_and_abort "Could not mount #{@device} to #{@backup_mount_point}" unless $?.success?
   $?.success?
 end
 
 def remount_as(option,device,mount_point)
-  raise "I don't have a mount option, device and mount point." unless option && device && mount_point
-  raise "Cannot remount because #{mount_point} is not mounted" unless is_mounted?(device,mount_point)
+  alert_and_abort "I don't have a mount option, device and mount point." unless option && device && mount_point
+  alert_and_abort "Cannot remount because #{mount_point} is not mounted" unless is_mounted?(device,mount_point)
   log "Remounting #{mount_point} as #{option}"
 
   mount_opts = ['remount']
@@ -104,12 +135,12 @@ def remount_as(option,device,mount_point)
   mount_opt_str = mount_opts.join(',')
 
   `sudo mount -o #{mount_opt_str},#{option} #{device} #{mount_point}`
-  raise "mount #{device} as #{option} failed" unless $?.success?
+  alert_and_abort "mount #{device} as #{option} failed" unless $?.success?
   $?.success?
 end
 
 def is_mounted?(device,mount_point)
-  raise "is_mounted says: You did not provide me with a device and mount point." unless device && mount_point
+  alert_and_abort "is_mounted says: You did not provide me with a device and mount point." unless device && mount_point
   found = false
   File.open('/proc/mounts', 'r').each_line do |line|
     found = true if line.include? mount_point
@@ -124,10 +155,10 @@ def is_btrfs_subvolume?(volume,subvolume)
   # 'latest' cannot be found in the list. But it is getting fixed.
   # http://www.spinics.net/lists/linux-btrfs/msg07605.html
 
-  raise "is_btrfs_subvolume says: I need a volume and subvolume to check." unless volume && subvolume
+  alert_and_abort "is_btrfs_subvolume says: I need a volume and subvolume to check." unless volume && subvolume
 
   unless `sudo btrfs subvolume list #{volume}`.include? 'latest' then
-    raise "You must create a subvolume at #{volume}/#{subvolume}. Try running `btrfs subvolume create #{volume}/#{subvolume}`."
+    alert_and_abort "You must create a subvolume at #{volume}/#{subvolume}. Try running `btrfs subvolume create #{volume}/#{subvolume}`."
     return false
   end
 
@@ -136,7 +167,7 @@ end
 
 def command_path(command)
   cmd_path=`which #{command}`.strip
-  raise "#{command}: command not found" if cmd_path.empty?
+  alert_and_abort "#{command}: command not found" if cmd_path.empty?
   cmd_path
 end
 
@@ -159,10 +190,10 @@ def rsync
       end
     end
 
-    raise "rsync says: I need a source and destination" unless src && dst
+    alert_and_abort "rsync says: I need a source and destination" unless src && dst
 
-    `sudo mkdir -p #{dst}`
-    raise "Could not create #{dst} directory" unless $?.success?
+    `sudo mkdir -p #{dst}` # TODO: convert this to ruby
+    alert_and_abort "Could not create #{dst} directory" unless $?.success?
 
     # start the backup
     log "Starting the backup."
@@ -178,7 +209,7 @@ def btrfs_snapshot
   `sudo mkdir -p #{@snapshot_dir}`
 
   log "Creating file system snapshot."
-  raise "A snapshot by that name already exists" if File.directory?("#{@snapshot_dir}/#{date}")
+  alert_and_abort "A snapshot by that name already exists" if File.directory?("#{@snapshot_dir}/#{date}")
   `sudo btrfs subvolume snapshot #{@backup_mount_point}/latest '#{@snapshot_dir}/#{date}' >> #{@log_file} 2>&1`        # TODO: make logging better
   $?.success?
 end
