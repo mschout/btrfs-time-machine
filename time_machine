@@ -231,9 +231,9 @@ def btrfs_snapshot
   end
 end
 
-def btrfs_delete_snapshot(date)
-  log "deleting snapshot from #{date}"
-  `sudo btrfs subvolume delete '#{@snapshot_dir}/#{date}' >> #{@log_file} 2>&1`
+def btrfs_delete_snapshot(snapshot)
+  log "deleting snapshot from #{snapshot}"
+  `sudo btrfs subvolume delete '#{@snapshot_dir}/#{snapshot}' >> #{@log_file} 2>&1`
 end
 
 def btrfs_snapshot_rotate
@@ -245,7 +245,7 @@ def btrfs_snapshot_rotate
     snapshots.each do |snapshot|
       max_age = @snapshot_max_age[unit].to_i * 3600
       if Time.parse(snapshot) < Time.now - (@snapshot_max_age[unit] * 3600)
-        btrfs_delete_snapshot snapshot
+        btrfs_delete_snapshot "#{unit}/#{snapshot}"
       end
     end
   end
